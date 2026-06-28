@@ -1,6 +1,42 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+A browser implementation of the 2048 game, built with TypeScript and Vite. No framework, no runtime dependencies — the DOM is driven by hand and tile motion is animated entirely in CSS.
+
+## Commands
+
+- `npm run dev` — start the Vite dev server with hot reload.
+- `npm run build` — type-check (`tsc`) then produce a production bundle in `dist/`.
+- `npm run preview` — serve the built bundle locally.
+
+There is no test runner or linter configured. Type-checking via `tsc` (run as part of `build`) is the only automated verification; `tsconfig.json` enables `strict`, `noUnusedLocals`, and `noUnusedParameters`, so unused symbols fail the build.
+
+## Architecture
+
+Two modules with a deliberate separation:
+
+- **`src/game.ts`** — pure game logic, no DOM. Owns the `Grid` (a 4×4 array of `Tile | null`) and the rules: `move()`, `spawnTile()`, `hasWon()`, `isGameOver()`. `move()` mutates the grid in place and returns `{ moved, gained }`.
+- **`src/main.ts`** — all DOM, input, rendering, and game-loop state (`grid`, `score`, `best`, `won`, `over`). Best score persists to `localStorage` under `2048-best`. Handles keyboard (arrow keys) and touch/swipe input, both routed through `handleMove()`.
+- **`src/style.css`** — visual styling and animation. Tiles are absolutely positioned via CSS custom properties `--r`/`--c`; CSS `transition` on `left`/`top` produces the slide.
+
+### Animation model (the subtle part)
+
+Tile movement is animated by carrying per-move state on each `Tile` rather than diffing the DOM:
+
+- Before applying a move, `move()` snapshots each tile's position into `prevRow`/`prevCol` and clears `isNew`/`mergedFrom`.
+- A merge does not mutate an existing tile: it creates a **new** tile with `mergedFrom = [source, target]`, and the two consumed tiles keep their slid-to positions so they animate underneath before being discarded next render.
+- `render()` clears `#tiles` and re-creates every tile element each frame. `addTile()` places the element at the *previous* position, then snaps it to the real position on the next `requestAnimationFrame` so the CSS transition fires. It recurses into `mergedFrom` to render the consumed tiles.
+
+Because `render()` rebuilds all tile DOM from the grid every move, the grid is the single source of truth — keep logic in `game.ts` operating on the grid, and let `main.ts` reflect it.
+
+---
+
+## Behavioral guidelines
+
+Guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
