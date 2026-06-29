@@ -13,6 +13,10 @@ import {
 } from "./game";
 
 const BEST_KEY = "2048-best";
+const THEME_KEY = "2048-theme";
+
+type Theme = "light" | "dark" | "neon";
+const THEMES: readonly Theme[] = ["light", "dark", "neon"];
 
 let grid: Grid = createGrid();
 let score = 0;
@@ -23,6 +27,14 @@ let over = false;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
+  <div class="theme-toolbar" id="theme-toolbar">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Themes" aria-expanded="false">🎨</button>
+    <div class="theme-options">
+      <button class="theme-btn" data-theme-value="light" aria-label="Light theme" title="Light"></button>
+      <button class="theme-btn" data-theme-value="dark" aria-label="Dark theme" title="Dark"></button>
+      <button class="theme-btn" data-theme-value="neon" aria-label="Neon theme" title="Neon"></button>
+    </div>
+  </div>
   <div class="container">
     <header>
       <h1>2048</h1>
@@ -198,5 +210,44 @@ app.querySelector<HTMLButtonElement>("#keep-going")!.addEventListener("click", (
   keepPlaying = true;
   render();
 });
+
+// Theme toolbar
+const toolbar = app.querySelector<HTMLDivElement>("#theme-toolbar")!;
+const themeToggle = app.querySelector<HTMLButtonElement>("#theme-toggle")!;
+const themeBtns = app.querySelectorAll<HTMLButtonElement>(".theme-btn");
+
+function applyTheme(theme: Theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  themeBtns.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.themeValue === theme);
+  });
+}
+
+function closeToolbar() {
+  toolbar.classList.remove("open");
+  themeToggle.setAttribute("aria-expanded", "false");
+}
+
+themeToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = toolbar.classList.toggle("open");
+  themeToggle.setAttribute("aria-expanded", String(open));
+});
+
+document.addEventListener("click", (e) => {
+  if (!toolbar.contains(e.target as Node)) closeToolbar();
+});
+
+themeBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const theme = btn.dataset.themeValue as Theme;
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    closeToolbar();
+  });
+});
+
+const savedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
+applyTheme(savedTheme && THEMES.includes(savedTheme) ? savedTheme : "light");
 
 newGame();
