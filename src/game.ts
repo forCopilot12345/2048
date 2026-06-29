@@ -38,6 +38,17 @@ export function createGrid(): Grid {
   return Array.from({ length: SIZE }, () => Array<Tile | null>(SIZE).fill(null));
 }
 
+/** Deep copy of the grid with per-move animation state reset (for undo/restore). */
+export function cloneGrid(grid: Grid): Grid {
+  return grid.map((row) =>
+    row.map((tile) =>
+      tile
+        ? { ...tile, prevRow: tile.row, prevCol: tile.col, isNew: false, mergedFrom: null }
+        : null
+    )
+  );
+}
+
 export function forEachTile(grid: Grid, fn: (tile: Tile) => void): void {
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {

@@ -5,6 +5,7 @@ import {
   Direction,
   SIZE,
   createGrid,
+  cloneGrid,
   forEachTile,
   spawnTile,
   move,
@@ -20,6 +21,8 @@ let best = Number(localStorage.getItem(BEST_KEY)) || 0;
 let won = false;
 let keepPlaying = false;
 let over = false;
+let undoSnapshot: { grid: Grid; score: number; won: boolean } | null = null;
+let undoUsed = false;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
@@ -39,6 +42,7 @@ app.innerHTML = `
         <p class="overlay-msg" id="overlay-msg"></p>
         <div class="overlay-actions">
           <button class="btn" id="keep-going">Keep going</button>
+          <button class="btn" id="undo">Undo</button>
           <button class="btn" id="overlay-btn">Try again</button>
         </div>
       </div>
@@ -110,6 +114,8 @@ function render() {
   } else {
     overlay.classList.remove("show", "win", "lose");
   }
+
+  overlay.classList.toggle("undo-available", over && !!undoSnapshot && !undoUsed);
 }
 
 /** Floats a "+N" over the score box, mirroring play2048.co. */
@@ -123,6 +129,9 @@ function showScoreAddition(amount: number) {
 
 function handleMove(dir: Direction) {
   if (over) return;
+  const prevGrid = cloneGrid(grid);
+  const prevScore = score;
+  const prevWon = won;
   const result = move(grid, dir);
   if (!result.moved) return;
 
@@ -136,8 +145,22 @@ function handleMove(dir: Direction) {
   spawnTile(grid);
 
   if (!won && hasWon(grid)) won = true;
-  if (isGameOver(grid)) over = true;
+  if (isGameOver(grid)) {
+    over = true;
+    if (!undoUsed) undoSnapshot = { grid: prevGrid, score: prevScore, won: prevWon };
+  }
 
+  render();
+}
+
+function undo() {
+  if (!undoSnapshot || undoUsed) return;
+  grid = undoSnapshot.grid;
+  score = undoSnapshot.score;
+  won = undoSnapshot.won;
+  over = false;
+  undoUsed = true;
+  undoSnapshot = null;
   render();
 }
 
@@ -147,6 +170,8 @@ function newGame() {
   won = false;
   keepPlaying = false;
   over = false;
+  undoSnapshot = null;
+  undoUsed = false;
   spawnTile(grid);
   spawnTile(grid);
   render();
@@ -194,6 +219,7 @@ boardEl.addEventListener("touchend", (e) => {
 
 app.querySelector<HTMLButtonElement>("#new-game")!.addEventListener("click", newGame);
 app.querySelector<HTMLButtonElement>("#overlay-btn")!.addEventListener("click", newGame);
+app.querySelector<HTMLButtonElement>("#undo")!.addEventListener("click", undo);
 app.querySelector<HTMLButtonElement>("#keep-going")!.addEventListener("click", () => {
   keepPlaying = true;
   render();

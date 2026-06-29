@@ -207,6 +207,14 @@ h1 {
   display: none;
 }
 
+#undo {
+  display: none;
+}
+
+.overlay.undo-available #undo {
+  display: inline-block;
+}
+
 .overlay-msg {
   font-size: 44px;
   font-weight: 800;
